@@ -44,8 +44,12 @@
    */
   .config(['$httpProvider', function($httpProvider) {
 
-    var interceptor = ['$rootScope', '$q', 'httpBuffer', function($rootScope, $q, httpBuffer) {
+    var interceptor = ['$rootScope', '$q', 'httpBuffer', '$injector', function($rootScope, $q, httpBuffer, $injector) {
       function success(response) {
+        var $http = $http || $injector.get('$http');
+        if ($http.pendingRequests.length < 1) {
+          $rootScope.$broadcast('event:auth-requestCompleted');
+        }
         return response;
       }
 
@@ -56,11 +60,16 @@
           $rootScope.$broadcast('event:auth-loginRequired', response);
           return deferred.promise;
         }
-        // otherwise, default behaviour
+        var $http = $http || $injector.get('$http');
+        if ($http.pendingRequests.length < 1) {
+          $rootScope.$broadcast('event:auth-requestCompleted');
+        }
         return $q.reject(response);
       }
 
       return function(promise) {
+        var $http = $http || $injector.get('$http');
+        $rootScope.$broadcast('event:auth-requestStarted');
         return promise.then(success, error);
       };
 
